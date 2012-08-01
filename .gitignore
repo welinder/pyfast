@@ -1,0 +1,5 @@
+*.pyc
+.DS_Store
+/pyfast.c
+/pyfast.so
+build
