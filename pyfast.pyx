@@ -86,14 +86,12 @@ def fast_detect(np.ndarray[np.uint8_t,ndim=2] im, int thresh,
         nm_ret = nonmax_suppression(ret, scores,
                                     num_ret, &num_ret_nm)
         # TODO: free all those temporary variables we used
-        n = 2*num_ret_nm
-        my_cython_array = <xy[:n]> nm_ret
+        my_cython_array = <xy[:num_ret_nm]> nm_ret
         my_cython_array.callback_free_data = free
         ndarray = np.asarray(my_cython_array)
         return ndarray
     else:
-        n = 2*num_ret
-        my_cython_array = <xy[:n]> ret
+        my_cython_array = <xy[:num_ret]> ret
         my_cython_array.callback_free_data = free
         ndarray = np.asarray(my_cython_array)
         return ndarray
