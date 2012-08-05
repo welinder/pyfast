@@ -8,11 +8,6 @@ cdef extern from "fast.h":
 
     ctypedef unsigned char byte
 
-    int fast9_corner_score(byte *p, int pixel[], int bstart)
-    int fast10_corner_score(byte *p, int pixel[], int bstart)
-    int fast11_corner_score(byte *p, int pixel[], int bstart)
-    int fast12_corner_score(byte *p, int pixel[], int bstart)
-
     xy* fast9_detect(byte *im, int xsize, int ysize, int stride, 
                      int b, int *ret_num_corners)
     xy* fast10_detect(byte *im, int xsize, int ysize, int stride, 
@@ -52,28 +47,53 @@ cimport numpy as np
 np.import_array()
 
 # Define functions in Cython that use the C-library.
-def fast_detect2(np.ndarray[np.uint8_t,ndim=2] im):
+def fast_detect(np.ndarray[np.uint8_t,ndim=2] im, int thresh, 
+                ncontig=9, nonmax=False):
     cdef int xsize = <int> im.shape[1]
     cdef int ysize = <int> im.shape[0]
     cdef int num_ret
-    cdef xy *ret 
-    ret = fast9_detect(<byte*> im.data, xsize, ysize, 
-                       xsize, 50, &num_ret)
-    n = 2*num_ret
-    cdef cvarray my_cython_array = <xy[:n]> ret
-    my_cython_array.callback_free_data = free
-    ndarray = np.asarray(my_cython_array)
-    return ndarray
-
-# Define functions in Cython that use the C-library.
-def fast_detect(np.ndarray[np.uint8_t,ndim=2] im):
-    cdef int xsize = <int> im.shape[1]
-    cdef int ysize = <int> im.shape[0]
-    cdef int num_ret
-    cdef xy *ret 
-    ret = fast9_detect(<byte*> im.data, xsize, ysize, 
-                       xsize, 50, &num_ret)
-    dets = []
-    for i in range(num_ret):
-        dets.append((ret[i].x, ret[i].y))
-    return dets
+    cdef xy *ret
+    cdef xy *nm_ret
+    cdef int *scores
+    cdef int num_ret_nm
+    cdef cvarray my_cython_array
+    if ncontig == 9:
+       ret = fast9_detect(<byte*> im.data, xsize, ysize, 
+                          xsize, thresh, &num_ret)
+    elif ncontig == 10:
+       ret = fast10_detect(<byte*> im.data, xsize, ysize, 
+                           xsize, thresh, &num_ret)
+    elif ncontig == 11:
+       ret = fast11_detect(<byte*> im.data, xsize, ysize, 
+                           xsize, thresh, &num_ret)
+    elif ncontig == 12:
+       ret = fast12_detect(<byte*> im.data, xsize, ysize, 
+                           xsize, thresh, &num_ret)
+    # map onto numpy array
+    if nonmax:
+        if ncontig == 9:
+            scores = fast9_score(<byte*> im.data, xsize, ret, 
+                                 num_ret, thresh)
+        elif ncontig == 10:
+            scores = fast10_score(<byte*> im.data, xsize, ret, 
+                                  num_ret, thresh)
+        elif ncontig == 11:
+            scores = fast11_score(<byte*> im.data, xsize, ret, 
+                                  num_ret, thresh)
+        elif ncontig == 12:
+            scores = fast12_score(<byte*> im.data, xsize, ret, 
+                                  num_ret, thresh)
+        nm_ret = nonmax_suppression(ret, scores,
+                                    num_ret, &num_ret_nm)
+        # TODO: free all those temporary variables we used
+        n = 2*num_ret_nm
+        my_cython_array = <xy[:n]> nm_ret
+        my_cython_array.callback_free_data = free
+        ndarray = np.asarray(my_cython_array)
+        return ndarray
+    else:
+        n = 2*num_ret
+        my_cython_array = <xy[:n]> ret
+        my_cython_array.callback_free_data = free
+        ndarray = np.asarray(my_cython_array)
+        return ndarray
