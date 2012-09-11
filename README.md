@@ -26,7 +26,24 @@ just want to try it out. If you want to install it, you just run:
 
 # Use #
 
-Check out `demo/demo.py` for how to use the wrapper. It's really quite simple.
+To use `pyfast`, just import the module and run the `detect`
+function. For example, the most basic use is
+
+    import pyfast
+    detections, scores = pyfast.detect(image, threshold)
+
+where `image` is the image represented as a 2D UINT8 numpy array, and
+`threshold` is the threshold parameter for the FAST algorithm. Setting
+`threshold` to a value between 20 to 100 usually yields good
+results. Smaller values of the threshold run slower but returns more
+corners, higher values run faster but return fewer corners.
+See the Figure 11 in the
+[[original paper (PDF)][http://www.edwardrosten.com/work/rosten_2005_tracking.pdf]
+for more information about the tradeoff between speed and the number
+of corners detected.
+
+Check out `demo/demo.py` for a real example of how to use the
+wrapper. It's really quite simple.
 
 # License and copyright #
 
