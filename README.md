@@ -38,7 +38,7 @@ where `image` is the image represented as a 2D UINT8 numpy array, and
 results. Smaller values of the threshold run slower but returns more
 corners, higher values run faster but return fewer corners.
 See the Figure 11 in the
-[[http://www.edwardrosten.com/work/rosten_2005_tracking.pdf][original paper (PDF)]]
+[original paper (PDF)](http://www.edwardrosten.com/work/rosten_2005_tracking.pdf)
 for more information about the tradeoff between speed and the number
 of corners detected.
 
