@@ -22,7 +22,7 @@ This will compile the module in the current directory (assuming Cython and
 numpy are installed), but not install it on your system. Great approach if you
 just want to try it out. If you want to install it, you just run:
 
-    python setup.py
+    python setup.py install
 
 # Use #
 
