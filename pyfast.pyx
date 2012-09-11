@@ -1,4 +1,11 @@
+"""
+Cython wrapper for the FAST corner detector.
 
+See LICENSE for the license for this wrapper.
+See fast/LICENSE for the license for the original FAST implementation.
+
+Copyright (c) 2012 Peter Welinder.
+"""
 
 # declare the functions we want from the C-library.
 cdef extern from "fast.h":
@@ -49,6 +56,15 @@ np.import_array()
 def detect(np.ndarray[np.uint8_t,ndim=2] im, int thresh, n=9,
            nms=False, return_scores=True):
     """Detect FAST corners.
+    Returns a numpy array of (x,y) coordinates of corners if return_scores is
+    False or if nms is True. Otherwise returns two numpy arrays, one with the
+    corners and one with the corner scores.
+
+    :param im: image as a 2D uint numpy array (assumed to be in C-order).
+    :param thresh: the threshold for the FAST algorithm.
+    :param n: [9] number of contiguous pixels around the circle to use (9--12).
+    :param nms: [False] apply non-maximum suppression on the corners.
+    :param return_scores: [True] return the scores of the corners.
     """
     cdef int xsize = <int> im.shape[1]
     cdef int ysize = <int> im.shape[0]
