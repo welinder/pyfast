@@ -46,62 +46,73 @@ import numpy as np
 cimport numpy as np
 np.import_array()
 
-def fast_detect(np.ndarray[np.uint8_t,ndim=2] im, int thresh, n=9,
-                nonmax=False):
+def detect(np.ndarray[np.uint8_t,ndim=2] im, int thresh, n=9,
+           nms=False, return_scores=True):
     """Detect FAST corners.
     """
     cdef int xsize = <int> im.shape[1]
     cdef int ysize = <int> im.shape[0]
+    cdef int stride = <int> im.strides[0]
     # detect corners
     cdef int n_corners
     cdef xy *corners
+    cdef cvarray tmp_corner_array
     if n == 9:
        corners = fast9_detect(<byte*> im.data, xsize, ysize, 
-                              xsize, thresh, &n_corners)
+                              stride, thresh, &n_corners)
     elif n == 10:
        corners = fast10_detect(<byte*> im.data, xsize, ysize, 
-                               xsize, thresh, &n_corners)
+                               stride, thresh, &n_corners)
     elif n == 11:
        corners = fast11_detect(<byte*> im.data, xsize, ysize, 
-                               xsize, thresh, &n_corners)
+                               stride, thresh, &n_corners)
     elif n == 12:
        corners = fast12_detect(<byte*> im.data, xsize, ysize, 
-                               xsize, thresh, &n_corners)
+                               stride, thresh, &n_corners)
     else:
         raise ValueError, "n must be set to 9, 10, 11, or 12"
-    # convert to numpy array
-    cdef cvarray tmp_array
-    tmp_array = <xy[:n_corners]> corners
-    tmp_array.callback_free_data = free
-    out_array = np.asarray(tmp_array)
-    return out_array
-
-    # # map onto numpy array
-    # cdef xy *nm_ret
-    # cdef int *scores
-    # cdef int num_ret_nm
-    # if nonmax:
-    #     if ncontig == 9:
-    #         scores = fast9_score(<byte*> im.data, xsize, ret, 
-    #                              num_ret, thresh)
-    #     elif ncontig == 10:
-    #         scores = fast10_score(<byte*> im.data, xsize, ret, 
-    #                               num_ret, thresh)
-    #     elif ncontig == 11:
-    #         scores = fast11_score(<byte*> im.data, xsize, ret, 
-    #                               num_ret, thresh)
-    #     elif ncontig == 12:
-    #         scores = fast12_score(<byte*> im.data, xsize, ret, 
-    #                               num_ret, thresh)
-    #     nm_ret = nonmax_suppression(ret, scores,
-    #                                 num_ret, &num_ret_nm)
-    #     # TODO: free all those temporary variables we used
-    #     my_cython_array = <xy[:num_ret_nm]> nm_ret
-    #     my_cython_array.callback_free_data = free
-    #     ndarray = np.asarray(my_cython_array)
-    #     return ndarray
-    # else:
-    #     my_cython_array = <xy[:num_ret]> ret
-    #     my_cython_array.callback_free_data = free
-    #     ndarray = np.asarray(my_cython_array)
-    #     return ndarray
+    # extract scores and run nms if asked for
+    cdef int *scores
+    cdef cvarray tmp_score_array
+    cdef int n_corners_nms
+    cdef xy *corners_nms
+    if return_scores:
+        if n == 9:
+            scores = fast9_score(<byte*> im.data, stride, corners,
+                                 n_corners, thresh)
+        elif n == 10:
+            scores = fast10_score(<byte*> im.data, stride, corners,
+                                  n_corners, thresh)
+        elif n == 11:
+            scores = fast11_score(<byte*> im.data, stride, corners, 
+                                  n_corners, thresh)
+        elif n == 12:
+            scores = fast12_score(<byte*> im.data, stride, corners, 
+                                  n_corners, thresh)
+        if nms:
+            # run non-maximum suppression
+            corners_nms = nonmax_suppression(corners, scores,
+                                             n_corners, &n_corners_nms)
+            # clean up non-nms corners and scores
+            free(corners)
+            free(scores)
+            # convert to numpy array
+            tmp_corner_array = <xy[:n_corners_nms]> corners_nms
+            tmp_corner_array.callback_free_data = free
+            corners_ndarray = np.asarray(tmp_corner_array)
+            return corners_ndarray
+        else:
+            # corners
+            tmp_corner_array = <xy[:n_corners]> corners
+            tmp_corner_array.callback_free_data = free
+            corners_ndarray = np.asarray(tmp_corner_array)
+            # scores
+            tmp_score_array = <int[:n_corners]> scores
+            tmp_score_array.callback_free_data = free
+            scores_ndarray = np.asarray(tmp_score_array)
+            return corners_ndarray, scores_ndarray
+    else:
+        tmp_corner_array = <xy[:n_corners]> corners
+        tmp_corner_array.callback_free_data = free
+        corners_ndarray = np.asarray(tmp_corner_array)
+        return corners_ndarray
